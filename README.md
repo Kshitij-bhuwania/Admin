@@ -1,4 +1,3 @@
-
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -25,46 +24,49 @@
         <h2>🛠️ Admin Dashboard (Cloud Sync)</h2>
 
         <!-- Delivery Pricing Settings Card -->
-        <div class="card">
+   <div class="card">
             <h3>Delivery Pricing Rules (Distance Based)</h3>
             <div id="deliveryStatus" class="status-msg success">Settings saved successfully!</div>
-            
-            <label style="font-size: 13px; font-weight: 600;">Base Distance Limit (km)</label>
+           
+   <label style="font-size: 13px; font-weight: 600;">Base Distance Limit (km)</label>
             <input type="number" id="baseKm" value="3" step="0.5">
 
-            <label style="font-size: 13px; font-weight: 600;">Base Price for Base Distance (₹)</label>
+   <label style="font-size: 13px; font-weight: 600;">Base Price for Base Distance (₹)</label>
             <input type="number" id="basePrice" value="30">
 
-            <label style="font-size: 13px; font-weight: 600;">Additional Price per Extra km (₹)</label>
+   <label style="font-size: 13px; font-weight: 600;">Additional Price per Extra km (₹)</label>
             <input type="number" id="extraPricePerKm" value="15">
 
-            <button class="btn" onclick="saveDeliverySettings()">Save Delivery Pricing</button>
+   <button class="btn" onclick="saveDeliverySettings()">Save Delivery Pricing</button>
         </div>
 
         <!-- Add Category Card -->
-        <div class="card">
+  <div class="card">
             <h3>Add New Category</h3>
             <input type="text" id="newCategoryName" placeholder="Category Name (e.g., Starters, Drinks)">
             <button class="btn" onclick="addCategory()">Add Category</button>
         </div>
 
         <!-- Add Item Card -->
-        <div class="card">
+  <div class="card">
             <h3>Add Menu Item</h3>
             <label style="font-size: 13px; font-weight: 600;">Select Category</label>
             <select id="itemCategorySelect"></select>
 
-            <label style="font-size: 13px; font-weight: 600;">Item Name</label>
+   <label style="font-size: 13px; font-weight: 600;">Item Name</label>
             <input type="text" id="itemName" placeholder="Item Name (e.g., Paneer Tikka)">
 
-            <label style="font-size: 13px; font-weight: 600;">Price (₹)</label>
+   <label style="font-size: 13px; font-weight: 600;">Price (₹)</label>
             <input type="number" id="itemPrice" placeholder="Price">
 
-            <button class="btn" onclick="addItem()">Add Item to Menu</button>
+   <label style="font-size: 13px; font-weight: 600;">Image Link (URL)</label>
+            <input type="text" id="itemImage" placeholder="Paste image link here (e.g., https://...)">
+
+  <button class="btn" onclick="addItem()">Add Item to Menu</button>
         </div>
 
         <!-- Existing Menu List Card -->
-        <div class="card">
+  <div class="card">
             <h3>Current Live Menu</h3>
             <div id="adminMenuList">Loading menu...</div>
         </div>
@@ -154,9 +156,13 @@
                 catHtml += `<div style="font-size:13px; color:#a0aec0; padding: 6px 0;">No items in this category.</div>`;
             } else {
                 cat.items.forEach((item, itemIndex) => {
+                    let imgThumb = item.image ? `<img src="${item.image}" style="width: 28px; height: 28px; object-fit: cover; border-radius: 4px; vertical-align: middle; margin-right: 8px;">` : '';
                     catHtml += `
                         <div class="item-row">
-                            <span>${item.name} - <b>₹${item.price}</b></span>
+                            <span style="display: flex; align-items: center;">
+                                ${imgThumb}
+                                <span>${item.name} - <b>₹${item.price}</b></span>
+                            </span>
                             <button class="btn btn-danger" onclick="deleteItem(${catIndex}, ${itemIndex})">Delete</button>
                         </div>
                     `;
@@ -183,6 +189,7 @@
         let catIndex = document.getElementById('itemCategorySelect').value;
         let name = document.getElementById('itemName').value.trim();
         let price = parseFloat(document.getElementById('itemPrice').value);
+        let imageUrl = document.getElementById('itemImage').value.trim();
 
         if (catIndex === "" || !name || isNaN(price)) {
             alert('Please fill out all item details properly.');
@@ -194,11 +201,16 @@
             menu.categories[catIndex].items = [];
         }
 
-        menu.categories[catIndex].items.push({ name: name, price: price });
+        menu.categories[catIndex].items.push({ 
+            name: name, 
+            price: price, 
+            image: imageUrl 
+        });
         
         await saveMenuData(menu);
         document.getElementById('itemName').value = '';
         document.getElementById('itemPrice').value = '';
+        document.getElementById('itemImage').value = '';
         loadAdminPanel();
     }
 
