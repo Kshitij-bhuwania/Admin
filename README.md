@@ -26,23 +26,17 @@
 
         <!-- Delivery Pricing Settings Card -->
         <div class="card">
-            <h3>Delivery Pricing Rules (Faven Lightings)</h3>
+            <h3>Delivery Pricing Rules (Distance Based)</h3>
             <div id="deliveryStatus" class="status-msg success">Settings saved successfully!</div>
             
-            <label style="font-size: 13px; font-weight: 600;">Tier 1 Max Distance (km)</label>
-            <input type="number" id="tier1Dist" value="3" step="0.5">
+            <label style="font-size: 13px; font-weight: 600;">Base Distance Limit (km)</label>
+            <input type="number" id="baseKm" value="3" step="0.5">
 
-            <label style="font-size: 13px; font-weight: 600;">Tier 1 Delivery Charge (₹)</label>
-            <input type="number" id="tier1Price" value="30">
+            <label style="font-size: 13px; font-weight: 600;">Base Price for Base Distance (₹)</label>
+            <input type="number" id="basePrice" value="30">
 
-            <label style="font-size: 13px; font-weight: 600;">Tier 2 Max Distance (km)</label>
-            <input type="number" id="tier2Dist" value="6" step="0.5">
-
-            <label style="font-size: 13px; font-weight: 600;">Tier 2 Delivery Charge (₹)</label>
-            <input type="number" id="tier2Price" value="60">
-
-            <label style="font-size: 13px; font-weight: 600;">Above Tier 2 Delivery Charge (₹)</label>
-            <input type="number" id="farPrice" value="100">
+            <label style="font-size: 13px; font-weight: 600;">Additional Price per Extra km (₹)</label>
+            <input type="number" id="extraPricePerKm" value="15">
 
             <button class="btn" onclick="saveDeliverySettings()">Save Delivery Pricing</button>
         </div>
@@ -79,17 +73,14 @@
 <script>
     const FIREBASE_URL = "https://test-d34cf-default-rtdb.europe-west1.firebasedatabase.app";
 
-    // --- Delivery Settings Logic ---
     async function loadDeliverySettings() {
         try {
             let res = await fetch(`${FIREBASE_URL}/settings/delivery.json`);
             let data = await res.json();
             if (data) {
-                document.getElementById('tier1Dist').value = data.tier1Dist ?? 3;
-                document.getElementById('tier1Price').value = data.tier1Price ?? 30;
-                document.getElementById('tier2Dist').value = data.tier2Dist ?? 6;
-                document.getElementById('tier2Price').value = data.tier2Price ?? 60;
-                document.getElementById('farPrice').value = data.farPrice ?? 100;
+                document.getElementById('baseKm').value = data.baseKm ?? 3;
+                document.getElementById('basePrice').value = data.basePrice ?? 30;
+                document.getElementById('extraPricePerKm').value = data.extraPricePerKm ?? 15;
             }
         } catch (e) {
             console.log("Could not load delivery settings");
@@ -98,11 +89,9 @@
 
     async function saveDeliverySettings() {
         let settings = {
-            tier1Dist: parseFloat(document.getElementById('tier1Dist').value),
-            tier1Price: parseInt(document.getElementById('tier1Price').value),
-            tier2Dist: parseFloat(document.getElementById('tier2Dist').value),
-            tier2Price: parseInt(document.getElementById('tier2Price').value),
-            farPrice: parseInt(document.getElementById('farPrice').value)
+            baseKm: parseFloat(document.getElementById('baseKm').value),
+            basePrice: parseInt(document.getElementById('basePrice').value),
+            extraPricePerKm: parseInt(document.getElementById('extraPricePerKm').value)
         };
 
         try {
@@ -119,7 +108,6 @@
         }
     }
 
-    // --- Menu Manager Logic ---
     async function fetchMenuData() {
         try {
             let res = await fetch(`${FIREBASE_URL}/menu.json`);
