@@ -1,8 +1,9 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard (Cloud Sync)</title>
+    <title>Admin Dashboard</title>
     <style>
         body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f4f6f9; padding: 20px; color: #2d3748; display: flex; justify-content: center; margin: 0; }
         .container { width: 100%; max-width: 600px; }
@@ -19,13 +20,13 @@
         .item-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #edf2f7; font-size: 14px; }
         .status-msg { padding: 8px; border-radius: 6px; font-size: 13px; text-align: center; margin-bottom: 12px; display: none; }
         .success { background: #c6f6d5; color: #22543d; }
-        .image-preview { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e0; display: none; margin-bottom: 12px; }
+        .image-preview { width: 60px; height: 60px; object-fit: cover; border-radius: 6px; border: 1px solid #cbd5e0; display: none; margin-bottom: 12px; }
     </style>
 </head>
 <body>
 
    <div class="container">
-        <h2>🛠️ Admin Dashboard (Cloud Sync)</h2>
+        <h2>🛠️ Admin Dashboard</h2>
 
         <!-- Delivery Pricing Settings Card -->
         <div class="card">
@@ -66,8 +67,8 @@
             <label style="font-size: 13px; font-weight: 600;">Price (₹)</label>
             <input type="number" id="itemPrice" placeholder="Price">
 
-            <label style="font-size: 13px; font-weight: 600;">Image Link (URL)</label>
-            <input type="text" id="itemImage" placeholder="Paste image link here (e.g., https://...)" oninput="previewImage(this.value)">
+            <label style="font-size: 13px; font-weight: 600;">Upload Dish Image</label>
+            <input type="file" id="itemImageFile" accept="image/*" onchange="handleImageUpload(event)">
             <img id="imgPreview" class="image-preview" alt="Preview">
 
             <button class="btn" id="saveItemBtn" onclick="saveItem()">Add Item to Menu</button>
@@ -83,15 +84,48 @@
 
 <script>
     const FIREBASE_URL = "https://test-d34cf-default-rtdb.europe-west1.firebasedatabase.app";
+    let uploadedImageBase64 = "";
 
-    function previewImage(url) {
-        let preview = document.getElementById('imgPreview');
-        if (url.trim() !== '') {
-            preview.src = url;
-            preview.style.display = 'block';
-        } else {
-            preview.style.display = 'none';
+    function handleImageUpload(event) {
+        let file = event.target.files[0];
+        if (!file) return;
+
+        let reader = new FileReader();
+        reader.onload = function(e) {
+            let img = new Image();
+            img.onload = function() {
+                let canvas = document.createElement('canvas');
+                let ctx = canvas.getContext('2d');
+                let MAX_WIDTH = 400;
+                let MAX_HEIGHT = 400;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_WIDTH) {
+                        height *= MAX_WIDTH / width;
+                        width = MAX_WIDTH;
+                    }
+                } else {
+                    if (height > MAX_HEIGHT) {
+                        width *= MAX_HEIGHT / height;
+                        height = MAX_HEIGHT;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                uploadedImageBase64 = canvas.toDataURL('image/jpeg', 0.7); // 70% quality compression
+                
+                let preview = document.getElementById('imgPreview');
+                preview.src = uploadedImageBase64;
+                preview.style.display = 'block';
+            }
+            img.src = e.target.result;
         }
+        reader.readAsDataURL(file);
     }
 
     async function loadDeliverySettings() {
@@ -219,7 +253,6 @@
         let catIndex = document.getElementById('itemCategorySelect').value;
         let name = document.getElementById('itemName').value.trim();
         let price = parseFloat(document.getElementById('itemPrice').value);
-        let imageUrl = document.getElementById('itemImage').value.trim();
         let editCat = document.getElementById('editCatIndex').value;
         let editItem = document.getElementById('editItemIndex').value;
 
@@ -230,25 +263,27 @@
 
         let menu = await fetchMenuData();
 
-        // If editing an existing item
+        let finalImage = uploadedImageBase64;
+        if (!finalImage && editCat !== "" && editItem !== "") {
+            finalImage = menu.categories[parseInt(editCat)].items[parseInt(editItem)].image || "";
+        }
+
         if (editCat !== "" && editItem !== "") {
             let oldCatIndex = parseInt(editCat);
             let oldItemIndex = parseInt(editItem);
 
-            // If category changed, move item across categories
             if (oldCatIndex !== parseInt(catIndex)) {
                 menu.categories[oldCatIndex].items.splice(oldItemIndex, 1);
                 if (!menu.categories[catIndex].items) menu.categories[catIndex].items = [];
-                menu.categories[catIndex].items.push({ name, price, image: imageUrl });
+                menu.categories[catIndex].items.push({ name, price, image: finalImage });
             } else {
-                menu.categories[catIndex].items[oldItemIndex] = { name, price, image: imageUrl };
+                menu.categories[catIndex].items[oldItemIndex] = { name, price, image: finalImage };
             }
         } else {
-            // Adding brand new item
             if (!menu.categories[catIndex].items) {
                 menu.categories[catIndex].items = [];
             }
-            menu.categories[catIndex].items.push({ name, price, image: imageUrl });
+            menu.categories[catIndex].items.push({ name, price, image: finalImage });
         }
         
         await saveMenuData(menu);
@@ -256,35 +291,41 @@
         loadAdminPanel();
     }
 
-    function editItem(catIndex, itemIndex) {
-        let menu = window.lastFetchedMenu; // quick reference or we fetch fresh:
-        fetchMenuData().then(menu => {
-            let item = menu.categories[catIndex].items[itemIndex];
-            
-            document.getElementById('itemCategorySelect').value = catIndex;
-            document.getElementById('itemName').value = item.name;
-            document.getElementById('itemPrice').value = item.price;
-            document.getElementById('itemImage').value = item.image || '';
-            previewImage(item.image || '');
+    async function editItem(catIndex, itemIndex) {
+        let menu = await fetchMenuData();
+        let item = menu.categories[catIndex].items[itemIndex];
+        
+        document.getElementById('itemCategorySelect').value = catIndex;
+        document.getElementById('itemName').value = item.name;
+        document.getElementById('itemPrice').value = item.price;
+        
+        uploadedImageBase64 = item.image || "";
+        let preview = document.getElementById('imgPreview');
+        if (uploadedImageBase64) {
+            preview.src = uploadedImageBase64;
+            preview.style.display = 'block';
+        } else {
+            preview.style.display = 'none';
+        }
 
-            document.getElementById('editCatIndex').value = catIndex;
-            document.getElementById('editItemIndex').value = itemIndex;
+        document.getElementById('editCatIndex').value = catIndex;
+        document.getElementById('editItemIndex').value = itemIndex;
 
-            document.getElementById('itemCardTitle').innerText = "Edit Menu Item";
-            document.getElementById('saveItemBtn').innerText = "Update Menu Item";
-            document.getElementById('cancelEditBtn').style.display = 'block';
+        document.getElementById('itemCardTitle').innerText = "Edit Menu Item";
+        document.getElementById('saveItemBtn').innerText = "Update Menu Item";
+        document.getElementById('cancelEditBtn').style.display = 'block';
 
-            window.scrollTo({ top: 400, behavior: 'smooth' });
-        });
+        window.scrollTo({ top: 400, behavior: 'smooth' });
     }
 
     function resetItemForm() {
         document.getElementById('itemName').value = '';
         document.getElementById('itemPrice').value = '';
-        document.getElementById('itemImage').value = '';
+        document.getElementById('itemImageFile').value = '';
         document.getElementById('editCatIndex').value = '';
         document.getElementById('editItemIndex').value = '';
         document.getElementById('imgPreview').style.display = 'none';
+        uploadedImageBase64 = "";
 
         document.getElementById('itemCardTitle').innerText = "Add Menu Item";
         document.getElementById('saveItemBtn').innerText = "Add Item to Menu";
